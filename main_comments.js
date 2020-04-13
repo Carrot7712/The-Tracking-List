@@ -21,18 +21,22 @@
   //收藏準備
   const myConfirmedDataList =
     JSON.parse(localStorage.getItem('feverUsers')) || []
+  // console.log(myConfirmedDataList)
 
   //透過API取得使用者資料
   axios
     .get(INDEX_URL)
     .then((response) => {
       data.push(...response.data.results)
+      console.log(data)
       showLists(data)
     })
     .catch((error) => console.log(error))
   // ===============EventListeners======================
   //listen to data panel
   dataPanel.addEventListener('click', function () {
+    //如果是"詳細資料"按鈕被觸發
+    //按圖片也可以觸發
     if (
       event.target.matches('.btn-show-user') ||
       event.target.matches('.avatar') ||
@@ -41,12 +45,18 @@
       //清掉上一個使用者資料
       modalBody.innerHTML = ''
       displayProfile(event.target.dataset.id)
+      //如果是"加入確診"按鈕被觸發
     } else if (event.target.classList.contains('btn-add-fever')) {
+      //現在是綠色
       if (event.target.classList.contains('btn-info')) {
+        //就變紅色
         turnButtonRed(event.target)
+        //現在是紅色
       } else if (event.target.classList.contains('btn-danger')) {
+        //就變綠色
         turnButtonGreen(event.target)
       }
+      //把這個使用者存在local storage
       addConfirmedList(event.target.dataset.id)
     }
   })
@@ -58,11 +68,14 @@
     results = data.filter(
       (user) => user.name.match(regex) || user.surname.match(regex)
     )
+    // displayCard(results)
     showLists(results)
   })
   //listen to pagination click event
   pagination.addEventListener('click', (event) => {
+    //拿到所有分頁元素
     const lis = document.querySelectorAll('.page-item')
+    //  console.log(lis)
     //先進去把active都清掉一次
     lis.forEach((li) => li.classList.remove('active'))
     // console.log(event.target)
@@ -71,6 +84,7 @@
       event.target.parentElement.classList.add('active')
     }
   })
+  //listen to 查看確診名單 button click event
   confirmedCase.addEventListener('click', (event) => {
     changeConfirmCaseContext(event.target)
   })
@@ -169,7 +183,7 @@
       }
     })
   }
-  //04/13增加這個功能
+  //增加這個功能
   //show favorite icon
   function showFeverColor() {
     const feverIcon = document.querySelectorAll('.btn-add-fever')
@@ -189,11 +203,13 @@
   function displayProfile(id) {
     //set request url
     const url = INDEX_URL + id
+    console.log(url)
     //send request to Show API
     axios
       .get(url)
       .then((response) => {
         const data = response.data
+        // console.log(data)
         //insert data into modal UI
         modalBody.innerHTML = `
           <div class="row d-flex align-items-center">
@@ -246,29 +262,45 @@
 
   //加入確診名單
   function addConfirmedList(id) {
+    //觸發事件的按鈕.btn-add-fever上面的id是否能在data中找的到，找的到的話回傳第一個找到的結果(一個物件)存在user中
     const user = data.find((item) => item.id === Number(id))
+    console.log(user) //{id: 457, name: …}
+    //檢查觸發事件的按鈕.btn-add-fever上面的id是否能在myConfirmedDataList找到一樣的
+    //如果有找到，回傳值會是true，就問使用者要不要移出
     if (myConfirmedDataList.some((item) => item.id === Number(id))) {
+      //已在名單中的人，再按一下的行為是移出名單
+      //移出之前再跟使用者確認一次
       const confirmation = confirm(
         `您確定要將 ${user.name} ${user.surname}自確診名單移出嗎？ `
       )
+      //使用者確認要移出           就幫他移出確診名單
       if (confirmation === true) removeConfirmedList(id)
     } else {
+      //在myConfirmedDataList沒找到一樣的id，代表還沒在名單裡，預設行為是加入名單
+      //加入名單，越晚加入的再越前面
       myConfirmedDataList.unshift(user)
+      //回報給使用者已完成動作
       alert(`成功將${user.name} ${user.surname}加入確診名單。`)
     }
+    //做完以後，更新localStorage
     localStorage.setItem('feverUsers', JSON.stringify(myConfirmedDataList))
     console.log(myConfirmedDataList)
   }
 
   //移出確診名單
   function removeConfirmedList(id) {
+    // console.log(id)
+    // 在myConfirmedDataList陣列中，尋找有沒有和觸發事件的按鈕.btn-add-fever上面的id一樣的id，有的話告訴我那個物件的index
     const index = myConfirmedDataList.findIndex(
       (item) => item.id === Number(id)
     )
+    //沒找到
     if (index === -1) return
 
+    //有找到，移除，更新localStorage
     myConfirmedDataList.splice(index, 1)
     localStorage.setItem('feverUsers', JSON.stringify(myConfirmedDataList))
+    // console.log(myConfirmedDataList)
   }
 
   //顯示名單
@@ -280,6 +312,7 @@
   //控制卡片上"確診"按鈕內容
   //變紅
   function turnButtonRed(target) {
+    // console.log(target.innerText)
     target.classList.replace('btn-info', 'btn-danger')
     target.innerText = '確診!'
   }
@@ -295,15 +328,18 @@
     // console.log(target.innerText)
     //是紅色
     if (target.classList.contains('btn-danger')) {
+      //就不要紅色，變藍色，改字，重新渲染
       target.classList.replace('btn-danger', 'btn-primary')
       target.innerText = '看全部名單'
       showLists(myConfirmedDataList)
+      //此模式下拿掉加入鈕
       let deleteButton = document.querySelectorAll(
         'button[id="confirmed-button"]'
       )
       $(deleteButton).remove()
       //是藍色
     } else if (target.classList.contains('btn-primary')) {
+      //就不要藍色，變紅色，改字，重新渲染
       target.classList.replace('btn-primary', 'btn-danger')
       target.innerText = '看確診名單'
       showLists(data)
